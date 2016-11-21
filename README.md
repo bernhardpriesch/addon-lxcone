@@ -16,7 +16,7 @@ This addon has the following capabilities:
 * Supports File-System, LVM and CEPH datastores.
 * It's able to hot-attach and detach NICs and Disks from all the datastores specified before.
 * Failure probe. In case any node is forcibly power off, or in case of an electrical failure, all containers that where running inside affected nodes will be up and running once the node is started again, and all hard drives and NICs attached and hot-attached will be in the same state they were. Only running containers will be started, the ones that where in power off state will stay the same. The only condition is that the frontend must be up before nodes are started, and /var/lib/one must be specified with the auto option inside fstab (step 2.4 from the Guide).
-* VM snaphots, only for containers with File-System disks attached.
+* VM snaphots, only for containers with LVM disks attached.
 * Obtain monitoring information from nodes and containers.
 * Limit container's resources. In this moment, we are only able to limit RAM memory. CPU limit is not yet supported.
 
@@ -38,13 +38,12 @@ Leaders: Sergio Vega Gutiérrez (sergiojvg92@gmail.com), José Manuel de la Fé 
 
 ## Compatibility
 
-This addon was tested on OpenNebula 4.10, 4.12 and 4.14, with the 
-frontend installed on Ubuntu 14.04 and Debian 8 (Jessie). The host with LXC was a 
-Debian 8 (Jessie) PC.
+This addon was tested on OpenNebula 5.0.2, with the 
+frontend installed on CentOS 7 The host with LXC was a running on CentOS 7.
 
 
 ## Installation, Configuration and Usage
-Use [this guide](https://github.com/OpenNebula/addon-lxcone/blob/master/Guide.md)
+Use [this guide](https://github.com/bernhardpriesch/addon-lxcone/blob/master/Guide.md)
 
 ## References
 [LXC] (https://linuxcontainers.org/)

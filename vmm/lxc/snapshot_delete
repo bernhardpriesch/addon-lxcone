@@ -27,8 +27,10 @@ VM_ID="$3"
 #HOST="$4"
 DOMAIN="one-${VM_ID}"
 
+echo "$0 $1 $2 $3 $4 $5 $6" >> /var/lib/one/output
+
 exec_and_log \
-    "sudo rm -R /var/lib/lxc/${DOMAIN}/snaps/${NAME}" \
-    "Could not delete snapshot $NAME for domain $DOMAIN."
+    "sudo rm -R /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}/" \
+    "Could not delete snapshot ${SNAP_ID} for domain $DOMAIN."
 
 exit 0

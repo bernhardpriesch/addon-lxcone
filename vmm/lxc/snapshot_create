@@ -27,22 +27,44 @@ VM_ID="$3"
 #HOST="$4"
 DOMAIN="one-${VM_ID}"
 
-sudo mkdir -p /var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks
 
-sudo lxc-freeze -n $DOMAIN
+echo "${SNAP_ID}"
 
-sudo rsync -zqrtaLp /var/lib/lxc/${DOMAIN}/ --exclude=snaps --exclude=rootfs.dev /var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}
+sudo mkdir -p /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks
 
-sudo rsync -zqrtLap /var/lib/one/datastores/0/${VM_ID}/ --exclude=*.iso /var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks
+#find lv
+lvpath=`cat /var/lib/lxc/one-${VM_ID}/config | grep lxc.rootfs | cut -d' ' -f3`
+echo "$lvpath" >> /var/lib/one/output
+echo "$0 $1 $2 $3 $4 $5 $6" >> /var/lib/one/output
+lvsize=`sudo lxc-attach --elevated-privileges -n ${DOMAIN} -- du -sD --exclude /mnt --exclude /proc / | cut -f1`
+lvsize=$(($lvsize / 1000 * 1024 + 1000000))
+remainder=$(($lvsize % 512))
+lvsize=$(($lvsize - $remainder))
+sudo lvcreate -L${lvsize}K -s -n ${DOMAIN}-snap-${SNAP_ID} ${lvpath}
+
+sudo mkdir -p /mnt/snap-${DOMAIN}
+
+sudo rsync -zqrtalp /var/lib/lxc/${DOMAIN}/ --exclude=snaps --exclude=rootfs.dev /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}
+
+sudo mkdir /mnt/empty-dir-snap-${DOMAIN}
+
+echo "$DOMAIN-snap-$SNAP_ID.img f 444 root root dd if=/dev/vg-one/$DOMAIN-snap-$SNAP_ID bs=512 conv=notrunc" >> pseudofile-${DOMAIN}-snap-${SNAP_ID}
+
+sudo mksquashfs /mnt/empty-dir-snap-${DOMAIN} /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks/${DOMAIN}-snap-${SNAP_ID}-squash.img -pf pseudofile-${DOMAIN}-snap-${SNAP_ID}
+
+sudo rm -f pseudofile-${DOMAIN}-snap-${SNAP_ID}
+
+sudo rm -rf /mnt/empty-dir-snap-${DOMAIN}
+sudo rm -rf /mnt/snap-${DOMAIN}
+sudo lvremove -f /dev/vg-one/${DOMAIN}-snap-${SNAP_ID}
 
 if [ "$?" = "0" ]; then
     echo "${SNAP_ID}"
 else
-    sudo lxc-unfreeze -n $DOMAIN
     error_message "Could not create snapshot $NAME for domain $DOMAIN."
     exit -1
 fi
 
-sudo lxc-unfreeze -n $DOMAIN
+echo "${SNAP_ID}"
 
 exit 0

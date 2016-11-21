@@ -4,7 +4,7 @@
 HYPERVISOR=$1
 DATASTORE_LOCATION=${2:-"/var/lib/one/datastores"}
 
-LVM_VG_PREFIX="vg-one-"
+LVM_VG_PREFIX="vg-one"
 
 PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin which vgdisplay &> /dev/null
 
@@ -42,7 +42,7 @@ for ds in $dirs; do
     FREE_MB=${FREE_MB:-"0"}
 
     if [ -n "$LVM_SIZE_CMD" ]; then
-        LVM_SIZE=$($LVM_SIZE_CMD ${LVM_VG_PREFIX}${ds} 2>/dev/null)
+        LVM_SIZE=$($LVM_SIZE_CMD ${LVM_VG_PREFIX} 2>/dev/null)
         LVM_STATUS=$?
     else
         LVM_STATUS=255

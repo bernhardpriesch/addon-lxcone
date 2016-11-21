@@ -12,6 +12,7 @@ fi
 ##############################################################################
 #                            	XPATH                                        #
 ##############################################################################
+echo "$DEPLOY_FILE"
 
 XPATH="/var/tmp/one/datastore/xpath.rb --stdin"
 
@@ -93,6 +94,15 @@ while read IP; do
 	let iFACE=iFACE+1
 done < <(echo -e "$XML_PARSE")
 
+#iFACE=0
+#while [ $iFACE -lt $TOTAL_iFACE ]; do
+#        echo "$iFACE $TOTAL_iFACE"
+#        RUTA=/VM/TEMPLATE/CONTEXT/ETH${iFACE}_IP
+#        IP_ETH[$iFACE]=$(xmlstarlet sel -t -v "$RUTA" /var/lib/one/vms/${VM_ID}/deployment.$DEPLOY_NUM)
+#        echo "IP: ${IP_ETH[$iFACE]}"
+#        let iFACE=iFACE+1
+#done
+
 #---------
 # NETMASK
 #---------
@@ -164,9 +174,10 @@ done < <(echo -e "$XML_PARSE")
 
 iFACE=0
 while [ $iFACE -lt $TOTAL_iFACE ]; do
+	echo "$iFACE $TOTAL_iFACE"
 	RUTA=/VM/TEMPLATE/CONTEXT/ETH${iFACE}_GATEWAY
 	GW_ETH[$iFACE]=$(xmlstarlet sel -t -v "$RUTA" /var/lib/one/vms/${VM_ID}/deployment.$DEPLOY_NUM)
-
+	echo "Gateway: ${GW_ETH[$iFACE]}"
 	if [ -n "${GW_ETH[$iFACE]}" ]; then
 		GWs=$iFACE
 		let GWs=GWs-1
@@ -198,6 +209,7 @@ done
 cnt_iface=0
 
 while [ $cnt_iface -lt $iFACE ];do
+echo "$cnt_iface $iFACE ${IP_ETH[$cnt_iface]}"
 if [ -n "${IP_ETH[$cnt_iface]}" ]; then
 	CONFIG_IP_ETH="lxc.network.ipv4 = ${IP_ETH[$cnt_iface]}/${CIDR_MASK_ETH[$cnt_iface]}"
 else
@@ -236,7 +248,7 @@ case $VM_DISK_TYPE in
                 	sudo sed -i "$line_number r /tmp/rc.local.opennebula_temp" /etc/rc.local
 		fi
 		echo "sleep 5" > /var/lib/lxc/one-$VM_ID/clean
-		echo "VM_STATE=\$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
+		echo "VM_STATE=\$(lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "if [ \"\$VM_STATE\" = \"STOPPED\" ]; then" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "start_line=\$(grep -in \"at now -f /var/lib/lxc/one-$VM_ID/init\" /etc/rc.local | cut -d ':' -f 1)" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "end_line=\$((\$start_line+1))" >> /var/lib/lxc/one-$VM_ID/clean
@@ -248,7 +260,8 @@ case $VM_DISK_TYPE in
 			VG_SOURCE=$(echo -e "$VM_DISK_SOURCE" | cut -d ':' -f 2 | cut -d '.' -f 1)
 			rootfs="/dev/${VG_SOURCE}/${LV_SOURCE}"
                 else
-                        rootfs=/dev/vg-one-0/lv-one-${VM_ID}-0
+			error_message "Wrong file system type detected for one-$VM_ID"
+    			exit -1
                 fi
 		RC_LOCAL=$(sudo grep "lxc-start -l ERROR -d -n one-$VM_ID" /etc/rc.local)
                 if [ -z "$RC_LOCAL" ]; then
@@ -260,7 +273,7 @@ case $VM_DISK_TYPE in
                 	sudo sed -i "$line_number r /tmp/rc.local.opennebula_temp" /etc/rc.local
 		fi
 		echo "sleep 5" > /var/lib/lxc/one-$VM_ID/clean
-		echo "VM_STATE=\$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
+		echo "VM_STATE=\$(lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "if [ \"\$VM_STATE\" = \"STOPPED\" ]; then" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "start_line=\$(grep -in \"at now -f /var/lib/lxc/one-$VM_ID/init\" /etc/rc.local | cut -d ':' -f 1)" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "end_line=\$((\$start_line+1))" >> /var/lib/lxc/one-$VM_ID/clean
@@ -291,7 +304,7 @@ case $VM_DISK_TYPE in
                 	sudo sed -i "$line_number r /tmp/rc.local.opennebula_temp" /etc/rc.local
 		fi
 		echo "sleep 5" > /var/lib/lxc/one-$VM_ID/clean
-		echo "VM_STATE=\$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
+		echo "VM_STATE=\$(lxc-info -n one-$VM_ID | grep State | awk '{ print \$2 }')" >> /var/lib/lxc/one-$VM_ID/clean
                 echo "if [ \"\$VM_STATE\" = \"STOPPED\" ]; then" >> /var/lib/lxc/one-$VM_ID/clean
 		echo "sudo rbd unmap ${rootfs}" >> /var/lib/lxc/one-$VM_ID/clean
 		echo "start_line=\$(grep -in \"rbd map $CEPH_AUTH $VM_DISK_SOURCE\" /etc/rc.local | cut -d ':' -f 1)" >> /var/lib/lxc/one-$VM_ID/clean
@@ -316,8 +329,8 @@ cat > /var/lib/lxc/one-$VM_ID/stop-hook <<EOF
 #!/bin/bash
 #sed -i s/"lxc.start.auto = 1"/"lxc.start.auto = 0"/g /var/lib/lxc/one-$VM_ID/config
 while read iFACE; do
-	sudo ip l del \$iFACE
-done < <(ip a | grep "${VM_ID}-" | cut -d ':' -f 2)
+	ip l del \$iFACE
+done < <(ip a | grep "${VM_ID}-" | cut -d ':' -f 2 | cut -d '@' -f 1)
 at now -f /var/lib/lxc/one-$VM_ID/clean
 EOF
 
@@ -348,7 +361,7 @@ cat > /var/lib/lxc/one-$VM_ID/config <<EOF
 lxc.rootfs = $rootfs
 
 # Common configuration
-lxc.include = /usr/share/lxc/config/debian.common.conf
+lxc.include = /usr/share/lxc/config/centos.common.conf
 
 # Container specific configuration
 #lxc.mount = /var/lib/lxc/one-$VM_ID/fstab
@@ -415,7 +428,7 @@ let XML_ELEMENT=XML_ELEMENT+1
 			echo "lxc-device -n one-$VM_ID add $loop" >> /var/lib/lxc/one-$VM_ID/vnc
 			echo "lxc-attach -n one-$VM_ID -- mkdir -p /media/$DSK_ID" >> /var/lib/lxc/one-$VM_ID/vnc
 			echo "lxc-attach -n one-$VM_ID -- mount $loop /media/$DSK_ID" >> /var/lib/lxc/one-$VM_ID/vnc
-			echo "sudo losetup -d ${loop}" >> /var/lib/lxc/one-$VM_ID/clean;;
+			echo "losetup -d ${loop}" >> /var/lib/lxc/one-$VM_ID/clean;;
         	RBD) 	if [ "${DISK_CLONE[${XML_ELEMENT}]}" = "YES" ]; then
                         	DISK_SOURCE[${XML_ELEMENT}]="${DISK_SOURCE[${XML_ELEMENT}]}-${VM_ID}-${DSK_ID}"
                         fi
@@ -430,13 +443,14 @@ let XML_ELEMENT=XML_ELEMENT+1
 			echo "lxc-attach -n one-$VM_ID -- mkdir -p /media/$DSK_ID" >> /var/lib/lxc/one-$VM_ID/vnc
 			echo "lxc-attach -n one-$VM_ID -- mount \$RBD_DEV /media/$DSK_ID" >> /var/lib/lxc/one-$VM_ID/vnc
 			echo "RBD_DEV=\$(rbd showmapped | grep -m 1 $IMAGE_NAME | awk '{print \$5}')" >> /var/lib/lxc/one-$VM_ID/clean
-			echo "sudo rbd unmap \$RBD_DEV" >> /var/lib/lxc/one-$VM_ID/clean;;
+			echo "rbd unmap \$RBD_DEV" >> /var/lib/lxc/one-$VM_ID/clean;;
 		BLOCK)  if [ "${DISK_TM_MAD[${XML_ELEMENT}]}" = "lvm" ]; then
 				LV_SOURCE=$(echo "${DISK_SOURCE[${XML_ELEMENT}]}" | cut -d ':' -f 2 | cut -d '.' -f 2)
                         	VG_SOURCE=$(echo "${DISK_SOURCE[${XML_ELEMENT}]}" | cut -d ':' -f 2 | cut -d '.' -f 1)
 				MOUNT_BLOCK="/dev/${VG_SOURCE}/${LV_SOURCE}"
 	                else
-				MOUNT_BLOCK="/dev/vg-one-0/lv-one-${VM_ID}-${DSK_ID}"
+       		                error_message "Wrong file system type detected for one-$VM_ID"
+                        	exit -1
 			fi
 			echo "#--------------------Mounting disk $DSK_ID on one-${VM_ID}--------------------#" >> /var/lib/lxc/one-$VM_ID/vnc
 			echo "lxc-device -n one-$VM_ID add ${MOUNT_BLOCK}" >> /var/lib/lxc/one-$VM_ID/vnc;
@@ -457,14 +471,22 @@ sudo lxc-attach -e -n one-$VM_ID -- hostname $VM_HOSTNAME_FIXED
 EOF
 
 echo "if [ \"\$VM_STATE\" = \"STOPPED\" ]; then" >> /var/lib/lxc/one-$VM_ID/clean
-echo "sudo rm -rf /var/lib/lxc/one-${VM_ID}" >> /var/lib/lxc/one-$VM_ID/clean
+echo "rm -rf /var/lib/lxc/one-${VM_ID}" >> /var/lib/lxc/one-$VM_ID/clean
 echo "fi" >> /var/lib/lxc/one-$VM_ID/clean
 
 ##############################################################################
 #                  	    INICIAR CONTENEDOR VIRTUAL                       #
 ##############################################################################
 
-sudo -E lxc-start -l ERROR -d -n one-$VM_ID -f /var/lib/lxc/one-$VM_ID/config
+#find lv
+echo "/var/lib/lxc/one-${VM_ID}/config" >> /var/lib/one/output
+cat /var/lib/lxc/one-${VM_ID}/config >> /var/lib/one/output
+lvpath=`cat /var/lib/lxc/one-${VM_ID}/config | grep lxc.rootfs | cut -d' ' -f3`
+echo "LVPath: $lvpath" >> /var/lib/one/output
+
+sudo lvchange -aey ${lvpath}
+
+sudo -E lxc-start -l DEBUG -d -n one-$VM_ID -f /var/lib/lxc/one-$VM_ID/config
 
 if [ "x$?" = "x0" ]; then
     echo "one-$VM_ID"

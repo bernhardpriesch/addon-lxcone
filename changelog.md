@@ -64,12 +64,17 @@
 * Minor bugs fixed
 
 
+###V1.1.4 (2016-11-21)
 
+* Snapshots improved (using squashfs-tools)
+* Migration improved (doing new deployment in restore because other node might not know about the lxc container yet)
+* better LVM support (added lvchange commands)
+* removed lxc-freeze and lxc-unfreeze commands
+* improved integration with RedHat cluster
 
 
 ###TODO
 
 * Live Migration
-* Snapshots
 * Smooth enhanced logging
 * Using LXC2 in Xenial Xerus

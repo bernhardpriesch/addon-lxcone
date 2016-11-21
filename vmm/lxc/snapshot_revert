@@ -22,22 +22,48 @@
 #source $(dirname $0)/lxcrc
 source $(dirname $0)/../../scripts_common.sh
 
-NAME="$2"
+SNAP_ID="$2"
 VM_ID="$3"
 DOMAIN="one-$VM_ID"
 
-sudo rsync -zqrtLap /var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}/ --exclude=disks /var/lib/lxc/${DOMAIN}/
+exec_and_log "sudo lxc-stop -n one-${VM_ID}"
 
-while read DISK; do
-	SRCE="/var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks/$DISK"
-	TRGT=`sudo realpath var/lib/one/datastores/0/${VM_ID}/$DISK`
-	sudo rsync -zqrtLap $SRCE $TRGT
-done < <(ls -1 /var/lib/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks)
+sudo lxc-wait -n one-${VM_ID} -s STOPPED
 
-sudo lxc-stop -n $DOMAIN
+sudo mkdir -p /mnt/${DOMAIN}-snap-${SNAP_ID}
 
-sudo lxc-wait -n $DOMAIN -s STOPPED
+sudo rsync -zqrtlap /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}/ --exclude=disks /var/lib/lxc/${DOMAIN}/
 
-sudo lxc-start -n $DOMAIN
+lvpath=`cat /var/lib/lxc/one-${VM_ID}/config | grep lxc.rootfs | cut -d' ' -f3`
+echo "$lvpath" >> /var/lib/one/output
+echo "$1 $2 $3 $4 $5" >> /var/lib/one/output
+
+sudo mount /mnt/backup/lxc/${DOMAIN}/snaps/${SNAP_ID}/disks/${DOMAIN}-snap-${SNAP_ID}-squash.img /mnt/${DOMAIN}-snap-${SNAP_ID}
+
+sudo dd if=/mnt/${DOMAIN}-snap-${SNAP_ID}/${DOMAIN}-snap-${SNAP_ID}.img of=$lvpath bs=512
+
+sudo umount /mnt/${DOMAIN}-snap-${SNAP_ID}/
+
+sudo -E lxc-start -l DEBUG -d -n one-$VM_ID -f /var/lib/lxc/one-$VM_ID/config
+
+if [ "x$?" = "x0" ]; then
+    echo "one-$VM_ID"
+else
+    error_message "Could not create domain from one-$VM_ID"
+    exit -1
+fi
+
+VM_STATE=$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print $2 }')
+if [ "$VM_STATE" != "RUNNING" ]; then
+	sleep 5
+	VM_STATE=$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print $2 }')
+	if [ "$VM_STATE" != "RUNNING" ]; then
+		sleep 5
+		VM_STATE=$(sudo lxc-info -n one-$VM_ID | grep State | awk '{ print $2 }')
+		if [ "$VM_STATE" != "RUNNING" ]; then
+			exit -1
+		fi
+	fi
+fi
 
 exit 0

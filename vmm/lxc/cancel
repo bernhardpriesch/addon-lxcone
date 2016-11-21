@@ -31,3 +31,9 @@ VM_ID=$3
 exec_and_log "sudo lxc-stop -n one-$VM_ID"
 
 sudo lxc-wait -n one-$VM_ID -s STOPPED
+
+#find lv
+lvpath=`cat /var/lib/lxc/one-${VM_ID}/config | grep lxc.rootfs | cut -d' ' -f3`
+echo "$lvpath"
+
+sudo lvchange -an ${lvpath}
