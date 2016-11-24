@@ -43,16 +43,19 @@ sudo lxc-ls -1 | grep one- | while read VM; do
 				# Gathering info...
 
 				# RAM
-				rMEMORY=$(sudo lxc-info -n $DEPLOY_ID | grep Memory | awk '{ print $3 }')
-				USEDMEMORY=$(sudo bc <<< ${rMEMORY}*1024)
-
+				#rMEMORY=$(sudo lxc-info -n $DEPLOY_ID | grep Memory | awk '{ print $3 }')
+				#USEDMEMORY=$(sudo bc <<< ${rMEMORY}*1024)
+				rMEMORY=$(sudo lxc-attach --elevated-privileges -n $DEPLOY_ID -- smem -t | tail -1 | awk '{sum+=$5} END {print sum}')
+				USEDMEMORY=${rMEMORY}
 				if [ -n "$USEDMEMORY" ]; then
 				POLL="$POLL MEMORY=${USEDMEMORY}"
 				fi
 
 				# CPU
-		        	rCPU=$(sudo lxc-attach -n $DEPLOY_ID -- top -d 1 -n 2 -b | grep "Cpu" | awk '{ print $2 }')
-	       			USEDCPU=$(echo $rCPU | awk '{ print $2 }')
+		        	#rCPU=$(sudo lxc-attach --elevated-privileges -n $DEPLOY_ID -- top -d 1 -n 2 -b | grep "Cpu" | awk '{ print $2 }')
+	       			#USEDCPU=$(echo $rCPU | awk '{ print $2 }')
+				rCPU=$(sudo lxc-attach --elevated-privileges -n $DEPLOY_ID -- ps -eo pcpu,pid,user,args | sort -k 1 -r | awk '{sum+=$0} END {print sum}')
+				USEDCPU=${rCPU}
 
 				if [ -n "$USEDCPU" ]; then
 				POLL="$POLL CPU=${USEDCPU}"
@@ -82,7 +85,7 @@ sudo lxc-ls -1 | grep one- | while read VM; do
 					        USEDSIZE=$(sudo bc -l <<< ${rUSEDSIZE}/1024)
 			               		POLL="$POLL DISK_SIZE=[ ID=$DISK_ID, SIZE=$USEDSIZE ]"
 				        fi
-				done < <(sudo lxc-attach -n $DEPLOY_ID -- df) ;;
+				done < <(sudo lxc-attach --elevated-privileges -n $DEPLOY_ID -- df) ;;
 
 		FROZEN) 	STATE=p ;
 				POLL="STATE=$STATE" ;;
