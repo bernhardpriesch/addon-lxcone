@@ -13,7 +13,7 @@ This is the readme for the current development version. If you're looking for on
 This addon has the following capabilities:
 
 * Deploy, stop, shutdown, reboot, save, suspend and resume LXC containers.
-* Supports File-System, LVM and CEPH datastores.
+* Supports LVM Datastores.
 * It's able to hot-attach and detach NICs and Disks from all the datastores specified before.
 * Failure probe. In case any node is forcibly power off, or in case of an electrical failure, all containers that where running inside affected nodes will be up and running once the node is started again, and all hard drives and NICs attached and hot-attached will be in the same state they were. Only running containers will be started, the ones that where in power off state will stay the same. The only condition is that the frontend must be up before nodes are started, and /var/lib/one must be specified with the auto option inside fstab (step 2.4 from the Guide).
 * VM snaphots, only for containers with LVM disks attached.
@@ -48,6 +48,7 @@ Use [this guide](https://github.com/bernhardpriesch/addon-lxcone/blob/master/Gui
 ## References
 [LXC] (https://linuxcontainers.org/)
 [OpenNebula] (http://opennebula.org/)
+[addon LVM] (https://github.com/OpenNebula/addon-lvm/)
 
 ## License
 
